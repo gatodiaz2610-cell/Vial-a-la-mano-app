@@ -28,6 +28,7 @@
       color: white;
       padding: 28px 20px;
       text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,.15);
     }
 
     header h1 {
@@ -37,6 +38,7 @@
 
     header p {
       color: #d1d5db;
+      font-size: 15px;
     }
 
     .container {
@@ -55,11 +57,13 @@
 
     .card h2 {
       margin-bottom: 8px;
+      font-size: 23px;
     }
 
     .subtitle {
       color: #6b7280;
       margin-bottom: 22px;
+      font-size: 14px;
       line-height: 1.5;
     }
 
@@ -67,6 +71,7 @@
       display: block;
       font-weight: bold;
       margin-bottom: 7px;
+      font-size: 14px;
     }
 
     input {
@@ -76,6 +81,12 @@
       border-radius: 11px;
       margin-bottom: 16px;
       font-size: 16px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
     }
 
     button {
@@ -86,11 +97,29 @@
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      transition: .2s;
+    }
+
+    button:active {
+      transform: scale(.98);
     }
 
     .btn-primary {
       background: #2563eb;
       color: white;
+    }
+
+    .btn-secondary {
+      background: #111827;
+      color: white;
+      margin-top: 12px;
+    }
+
+    .btn-link {
+      background: transparent;
+      color: #2563eb;
+      margin-top: 12px;
+      padding: 8px;
     }
 
     .btn-danger {
@@ -104,6 +133,7 @@
       padding: 12px;
       border-radius: 10px;
       display: none;
+      font-size: 14px;
       line-height: 1.45;
     }
 
@@ -169,7 +199,7 @@
       font-weight: bold;
     }
 
-    .icon {
+    .service .icon {
       font-size: 30px;
       display: block;
       margin-bottom: 8px;
@@ -230,20 +260,67 @@
     />
 
     <button
-      id="loginButton"
       class="btn-primary"
       onclick="login()"
+      id="loginButton"
     >
       Entrar
+    </button>
+
+    <button
+      class="btn-link"
+      onclick="sendPasswordReset()"
+    >
+      ¿Olvidaste tu contraseña?
     </button>
 
     <div id="loginMessage" class="message"></div>
 
   </div>
 
+  <div id="resetCard" class="card hidden">
+
+    <h2>Crear nueva contraseña</h2>
+
+    <p class="subtitle">
+      Escribe tu nueva contraseña dos veces.
+    </p>
+
+    <label for="newPassword">Nueva contraseña</label>
+
+    <input
+      id="newPassword"
+      type="password"
+      placeholder="Nueva contraseña"
+      autocomplete="new-password"
+    />
+
+    <label for="confirmPassword">Confirmar contraseña</label>
+
+    <input
+      id="confirmPassword"
+      type="password"
+      placeholder="Repite la nueva contraseña"
+      autocomplete="new-password"
+    />
+
+    <button
+      class="btn-primary"
+      onclick="saveNewPassword()"
+      id="savePasswordButton"
+    >
+      Guardar nueva contraseña
+    </button>
+
+    <div id="resetMessage" class="message"></div>
+
+  </div>
+
   <div id="ownerCard" class="card hidden">
 
-    <span class="owner-badge">👑 OWNER</span>
+    <span class="owner-badge">
+      👑 OWNER
+    </span>
 
     <h2>Panel del propietario</h2>
 
@@ -372,6 +449,9 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_ow1AQkTEiBw-_ba1rI7CJw_PbpbCBUk";
 
+const APP_URL =
+  "https://vial-a-la-mano-app.vercel.app/";
+
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
@@ -384,6 +464,9 @@ const loadingBox =
 const loginCard =
   document.getElementById("loginCard");
 
+const resetCard =
+  document.getElementById("resetCard");
+
 const ownerCard =
   document.getElementById("ownerCard");
 
@@ -395,6 +478,7 @@ function showOnly(element) {
 
   loadingBox.classList.add("hidden");
   loginCard.classList.add("hidden");
+  resetCard.classList.add("hidden");
   ownerCard.classList.add("hidden");
   userCard.classList.add("hidden");
 
@@ -402,10 +486,23 @@ function showOnly(element) {
 }
 
 
-function showMessage(text, type = "error") {
+function showLoginMessage(text, type = "error") {
 
   const box =
     document.getElementById("loginMessage");
+
+  box.className =
+    "message " + type;
+
+  box.textContent =
+    text;
+}
+
+
+function showResetMessage(text, type = "error") {
+
+  const box =
+    document.getElementById("resetMessage");
 
   box.className =
     "message " + type;
@@ -434,7 +531,7 @@ async function login() {
 
   if (!email || !password) {
 
-    showMessage(
+    showLoginMessage(
       "Escribe tu correo y contraseña."
     );
 
@@ -444,7 +541,7 @@ async function login() {
   button.disabled = true;
   button.textContent = "Entrando...";
 
-  showMessage(
+  showLoginMessage(
     "Verificando cuenta...",
     "info"
   );
@@ -461,9 +558,7 @@ async function login() {
 
     if (error) {
 
-      console.error(error);
-
-      showMessage(
+      showLoginMessage(
         "No se pudo iniciar sesión. Revisa el correo y la contraseña."
       );
 
@@ -472,7 +567,7 @@ async function login() {
 
     if (!data.user) {
 
-      showMessage(
+      showLoginMessage(
         "No se encontró el usuario."
       );
 
@@ -483,9 +578,7 @@ async function login() {
 
   } catch (error) {
 
-    console.error(error);
-
-    showMessage(
+    showLoginMessage(
       "Ocurrió un error al conectar con Supabase."
     );
 
@@ -494,6 +587,150 @@ async function login() {
     button.disabled = false;
     button.textContent = "Entrar";
   }
+}
+
+
+async function sendPasswordReset() {
+
+  const email =
+    document
+      .getElementById("email")
+      .value
+      .trim();
+
+  if (!email) {
+
+    showLoginMessage(
+      "Primero escribe tu correo electrónico."
+    );
+
+    return;
+  }
+
+  showLoginMessage(
+    "Enviando correo de recuperación...",
+    "info"
+  );
+
+  const { error } =
+    await supabaseClient
+      .auth
+      .resetPasswordForEmail(
+        email,
+        {
+          redirectTo: APP_URL
+        }
+      );
+
+  if (error) {
+
+    showLoginMessage(
+      "No se pudo enviar el correo: " + error.message
+    );
+
+    return;
+  }
+
+  showLoginMessage(
+    "Correo enviado. Revisa tu Gmail y abre el enlace para crear una nueva contraseña.",
+    "success"
+  );
+}
+
+
+async function saveNewPassword() {
+
+  const password =
+    document
+      .getElementById("newPassword")
+      .value;
+
+  const confirm =
+    document
+      .getElementById("confirmPassword")
+      .value;
+
+  const button =
+    document
+      .getElementById("savePasswordButton");
+
+  if (!password || !confirm) {
+
+    showResetMessage(
+      "Escribe la nueva contraseña dos veces."
+    );
+
+    return;
+  }
+
+  if (password.length < 6) {
+
+    showResetMessage(
+      "La contraseña debe tener al menos 6 caracteres."
+    );
+
+    return;
+  }
+
+  if (password !== confirm) {
+
+    showResetMessage(
+      "Las contraseñas no coinciden."
+    );
+
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Guardando...";
+
+  const { error } =
+    await supabaseClient
+      .auth
+      .updateUser({
+        password: password
+      });
+
+  if (error) {
+
+    showResetMessage(
+      "No se pudo cambiar la contraseña: " + error.message
+    );
+
+    button.disabled = false;
+    button.textContent = "Guardar nueva contraseña";
+
+    return;
+  }
+
+  showResetMessage(
+    "Contraseña cambiada correctamente. Ya puedes entrar con tu nueva contraseña.",
+    "success"
+  );
+
+  setTimeout(
+    async () => {
+
+      await supabaseClient.auth.signOut();
+
+      window.history.replaceState(
+        {},
+        document.title,
+        APP_URL
+      );
+
+      showOnly(loginCard);
+
+      document.getElementById("password").value = "";
+
+      showLoginMessage(
+        "Contraseña actualizada. Inicia sesión con la nueva contraseña.",
+        "success"
+      );
+
+    },
+    1800
+  );
 }
 
 
@@ -510,16 +747,13 @@ async function loadUser(user) {
 
     if (error) {
 
-      console.error(
-        "Error profiles:",
-        error
-      );
-
-      await supabaseClient.auth.signOut();
+      await supabaseClient
+        .auth
+        .signOut();
 
       showOnly(loginCard);
 
-      showMessage(
+      showLoginMessage(
         "La cuenta existe, pero no fue posible leer su perfil. Revisa la tabla profiles y las políticas RLS."
       );
 
@@ -528,11 +762,13 @@ async function loadUser(user) {
 
     if (!profile) {
 
-      await supabaseClient.auth.signOut();
+      await supabaseClient
+        .auth
+        .signOut();
 
       showOnly(loginCard);
 
-      showMessage(
+      showLoginMessage(
         "La cuenta existe, pero no tiene un perfil registrado en la tabla profiles."
       );
 
@@ -540,7 +776,9 @@ async function loadUser(user) {
     }
 
     const role =
-      String(profile.role || "")
+      String(
+        profile.role || ""
+      )
         .trim()
         .toUpperCase();
 
@@ -580,13 +818,13 @@ async function loadUser(user) {
 
   } catch (error) {
 
-    console.error(error);
-
-    await supabaseClient.auth.signOut();
+    await supabaseClient
+      .auth
+      .signOut();
 
     showOnly(loginCard);
 
-    showMessage(
+    showLoginMessage(
       "Error cargando el perfil del usuario."
     );
   }
@@ -605,7 +843,7 @@ async function logout() {
 
   showOnly(loginCard);
 
-  showMessage(
+  showLoginMessage(
     "Sesión cerrada correctamente.",
     "success"
   );
@@ -616,14 +854,29 @@ async function checkSession() {
 
   try {
 
+    const hash =
+      window.location.hash || "";
+
+    const search =
+      window.location.search || "";
+
+    const isRecoveryLink =
+      hash.includes("type=recovery") ||
+      search.includes("type=recovery");
+
+    if (isRecoveryLink) {
+
+      showOnly(resetCard);
+
+      return;
+    }
+
     const { data, error } =
       await supabaseClient
         .auth
         .getSession();
 
     if (error) {
-
-      console.error(error);
 
       showOnly(loginCard);
 
@@ -646,11 +899,9 @@ async function checkSession() {
 
   } catch (error) {
 
-    console.error(error);
-
     showOnly(loginCard);
 
-    showMessage(
+    showLoginMessage(
       "No se pudo conectar con Supabase."
     );
   }
@@ -662,8 +913,18 @@ supabaseClient
   .onAuthStateChange(
     async (event, session) => {
 
+      if (event === "PASSWORD_RECOVERY") {
+
+        showOnly(resetCard);
+
+        return;
+      }
+
       if (event === "SIGNED_OUT") {
+
         showOnly(loginCard);
+
+        return;
       }
 
     }
